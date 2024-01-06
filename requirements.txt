@@ -7,7 +7,7 @@ seaborn
 datetime
 emoji
 urlextract
-collections
+collection
 wordcloud
 idna
 uritools
