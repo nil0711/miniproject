@@ -5,7 +5,7 @@ pandas
 numpy
 seaborn
 datetime
-import emoji
+emoji
 urlextract
 collections
 wordcloud
