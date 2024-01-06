@@ -142,12 +142,9 @@ def month_activity(user_type,df ):
 def heat_map_data(user_type,df ):
     if user_type is not "Overall":
         df= df[df['user']==user_type]
-    period_order = ['12AM - 1AM', '1AM - 2AM', '2AM - 3AM', '3AM - 4AM', '4AM - 5AM',
-                '5AM - 6AM', '6AM - 7AM', '7AM - 8AM', '8AM - 9AM', '9AM - 10AM',
-                '10AM - 11AM', '11AM - 12PM', '12PM - 1PM', '1PM - 2PM', '2PM - 3PM',
-                '3PM - 4PM', '4PM - 5PM', '5PM - 6PM', '6PM - 7PM', '7PM - 8PM',
-                '8PM - 9PM', '9PM - 10PM', '10PM - 11PM', '11PM - 12AM']
-    df['period'] = pd.Categorical(df['period'], categories=period_order, ordered=True)
+    period=df['period'].unique()
+    period.sort()
+    df['period'] = pd.Categorical(df['period'], categories=period, ordered=True)
     heatmap_data = df.pivot_table(index='dayname', columns='period', values='message', aggfunc='count').fillna(0)
     
     return heatmap_data

@@ -7,11 +7,11 @@ def get_time_period(hour):
     if 0 <= hour < 1:
         return '12AM - 1AM'
     elif 1 <= hour < 12:
-        return f'{hour}AM - {hour+1}AM'
+        return f'{str(hour)[:-2]}AM - {str(hour+1)[:-2]}AM'
     elif hour == 12:
         return '12PM - 1PM'
     else:
-        return f'{hour-12}PM - {hour-11}PM'
+        return f'{str(hour-12)[:-2]}PM - {str(hour-11)[:-2]}PM'
 def extract_info(line):
     date_formats = ['%d/%m/%y, %I:%M %p', '%d/%m/%y, %H:%M -']
     

@@ -122,15 +122,19 @@ if uploaded_file is not None:
 
         st.markdown(center_align_title("User Activity Heatmap"), unsafe_allow_html=True)
         heat_map = heat_map_data(selected_user, df)
-        fig_heatmap, ax_heatmap = plt.subplots(figsize=(20, 6))
+        fig_heatmap, ax_heatmap = plt.subplots(figsize=(25, 10))
 
         # Assuming the index of your heatmap is the day names
         day_names_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
         heat_map = heat_map.reindex(day_names_order)
 
         sns.heatmap(heat_map, cbar_kws={'label': 'Message Count'}, annot=False, ax=ax_heatmap)
-        ax_heatmap.set_xlabel('Time Range')
+
+        # Set y-axis label rotation to vertical
+        ax_heatmap.set_yticklabels(ax_heatmap.get_yticklabels(), rotation=90, ha='right')
         ax_heatmap.set_ylabel('Days')
+
+        ax_heatmap.set_xlabel('Time Range')
         st.pyplot(fig_heatmap)
 
 
