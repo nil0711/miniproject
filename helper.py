@@ -5,6 +5,7 @@ from wordcloud import WordCloud
 import pandas as pd
 import emoji
 import seaborn as sns
+from datetime import datetime
 
 
 
@@ -143,9 +144,15 @@ def heat_map_data(user_type,df ):
     if user_type is not "Overall":
         df= df[df['user']==user_type]
     period=df['period'].unique()
-    period.sort()
+    period = sorted(period, key=convert_to_24_hour)
     df['period'] = pd.Categorical(df['period'], categories=period, ordered=True)
     heatmap_data = df.pivot_table(index='dayname', columns='period', values='message', aggfunc='count').fillna(0)
     
     return heatmap_data
+
+def convert_to_24_hour(time_range):
+    start_time, end_time = time_range.split(' - ')
+    start_dt = datetime.strptime(start_time, '%I%p')
+    end_dt = datetime.strptime(end_time, '%I%p')
     
+    return start_dt.strftime('%H:%M') + ' - ' + end_dt.strftime('%H:%M')   

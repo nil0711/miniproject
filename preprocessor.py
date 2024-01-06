@@ -4,13 +4,30 @@ from datetime import datetime
 import numpy as np
 
 def get_time_period(hour):
-    if 0 <= hour < 1:
-        return '12AM - 1AM'
-    elif 1 <= hour < 12:
-        return f'{str(hour)[:-2]}AM - {str(hour+1)[:-2]}AM'
+    if 0<=hour<1:
+        return "12AM - 1AM"
+    elif 1<= hour <11:
+        return f'{str(hour)}AM - {str(hour+1)}AM'
+    elif hour == 11:
+        return '11AM - 12PM'
     elif hour == 12:
         return '12PM - 1PM'
-    else:
+    elif hour == 23:
+        return f'{str(hour-12)}PM - 12AM'
+    elif 12 < hour <23:
+        return f'{str(hour-12)}PM - {str(hour-11)}PM'
+def get_time_period_dotted(hour):
+    if 0<=hour<1:
+        return "12AM - 1AM"
+    elif 1<= hour <11:
+        return f'{str(hour)[:-2]}AM - {str(hour+1)[:-2]}AM'
+    elif hour == 11:
+        return '11AM - 12PM'
+    elif hour == 12:
+        return '12PM - 1PM'
+    elif hour == 23:
+        return f'{str(hour-12)[:-2]}PM - 12AM'
+    elif 12 < hour <23:
         return f'{str(hour-12)[:-2]}PM - {str(hour-11)[:-2]}PM'
 def extract_info(line):
     date_formats = ['%d/%m/%y, %I:%M %p', '%d/%m/%y, %H:%M -']
@@ -68,6 +85,14 @@ def preprocess_text_file(uploaded_file):
     df['am/pm'] = df['date'].dt.strftime('%p')
     df['dayname']=df['date'].dt.day_name()
     df['period'] = df['hour'].apply(get_time_period)
+    change=False
+    for i in df['period'].unique():
+        if '.' in str(i):
+            change=True
+            break
+    if change:
+        df.drop('period',axis=1)
+        df['period'] = df['hour'].apply(get_time_period_dotted)
 
     df['only_date']=df['date'].dt.date
     df = df[~df['user'].str.contains('added')]
