@@ -3,6 +3,7 @@ matplotlib
 altair
 pandas
 numpy
+plotly
 seaborn
 datetime
 emoji
