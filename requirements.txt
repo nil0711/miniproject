@@ -1,0 +1,11 @@
+streamlit
+matplotlib
+altair
+pandas
+numpy
+seaborn
+datetime
+import emoji
+urlextract
+collections
+wordcloud
