@@ -9,3 +9,11 @@ emoji
 urlextract
 collections
 wordcloud
+idna
+uritools
+pytest
+platformdirs
+bump2version
+filelock
+dnspython
+black
