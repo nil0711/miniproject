@@ -18,3 +18,9 @@ bump2version
 filelock
 dnspython
 black
+time
+math
+dotenv
+scikit-learn
+textblob
+nltk
