@@ -18,7 +18,7 @@ bump2version
 filelock
 dnspython
 black
-
+google-generativeai
 
 
 scikit-learn
