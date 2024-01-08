@@ -20,7 +20,7 @@ dnspython
 black
 
 
-dotenv
+
 scikit-learn
 textblob
 nltk
