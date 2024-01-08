@@ -9,7 +9,7 @@ from datetime import datetime
 import google.generativeai as palm
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.decomposition import LatentDirichletAllocation
-from dotenv import load_dotenv
+
 
 
 
@@ -264,7 +264,7 @@ def subjectivity_trend(user_type,df ):
 def chat_keywords(user_type,df ):
     if user_type is not "Overall":
         df= df[df['user']==user_type]
-    load_dotenv()
+    
     df = purify_data(df)
     palm.configure(api_key=st.secrets['GOOGLE_API']) 
 

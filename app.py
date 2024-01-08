@@ -12,11 +12,11 @@ import matplotlib.dates as mdates
 
 import google.generativeai as genai 
 import seaborn as sns
-from dotenv import load_dotenv
+
 from preprocessor import preprocess_text_file
 from helper import stats, most_busy_user, get_wordcloud, top_com_words, fetch_message, top_emoji, time_line, daily_timeline, week_activity, month_activity, heat_map_data,monthly_senti_change,daily_senti_change,monthly_emotion_change,daily_emotion_change,compount_sentiment_monthly,compount_emotion_monthly,subjectivity_percentage,subjectivity_trend,chat_keywords
 
-load_dotenv()
+
 
 
 genai.configure(api_key=st.secrets['GOOGLE_API'])
@@ -365,7 +365,7 @@ with tabs[1]:
 
 with tabs[2]:
     genai.configure(api_key=st.secrets['GOOGLE_API'])
-    load_dotenv()
+    
     st.header("Chat with AI")
     model=genai.GenerativeModel("gemini-pro")
     chat=model.start_chat(history=[])
