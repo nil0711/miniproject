@@ -19,7 +19,7 @@ filelock
 dnspython
 black
 
-math
+
 dotenv
 scikit-learn
 textblob
