@@ -1,8 +1,12 @@
-import io
+
 import pandas as pd
 from datetime import datetime
 import numpy as np
-
+from textblob import TextBlob
+from nltk.sentiment import SentimentIntensityAnalyzer
+def get_sentiment_polarity(message):
+    analysis = TextBlob(message)
+    return analysis.sentiment.polarity
 def get_time_period(hour):
     if 0<=hour<1:
         return "12AM - 1AM"
@@ -106,5 +110,53 @@ def preprocess_text_file(uploaded_file):
 
     df = df[~np.isnan(df['year'])]
     df['year'] = df['year'].astype(int)
+    
+    # Sentiment Analysis
+    df['sentiment'] = df['message'].apply(get_sentiment_polarity)
+
+    df['sentiment_category'] = pd.cut(df['sentiment'], bins=[-1, -0.1, 0.1, 0.5, 1], 
+    labels=['negative', 'neutral', 'mixed', 'positive'])
+    
+    
+    df['emotion_nltk'] = df['message'].apply(get_emotion_nltk)
+    df['emotion_label_nltk'] = df['emotion_nltk'].apply(map_to_emotion_label)
+
+    
+    
+    df['polarity'] = df['message'].apply(get_polarity)
+    
+    
+    df['subjectivity'] = df['message'].apply(classify_subjectivity)
+    
+
 
     return df
+
+def get_emotion_nltk(text):
+    vader_lexicon_path = './vader_lexicon.txt'
+    sia = SentimentIntensityAnalyzer(lexicon_file=vader_lexicon_path)
+    sentiment_score = sia.polarity_scores(text)
+    emotion = sentiment_score['compound']
+    return emotion
+
+def map_to_emotion_label(emotion_score):
+    if emotion_score > 0.2:
+        return 'Joy'
+    elif emotion_score < -0.2:
+        return 'Sadness'
+    elif emotion_score < 0:
+        return 'Anger'
+    else:
+        return 'Neutral'
+    
+def get_polarity(message):
+    analysis = TextBlob(message)
+    return analysis.sentiment.polarity
+
+
+def classify_subjectivity(message):
+    analysis = TextBlob(message)
+    if analysis.sentiment.subjectivity > 0.5:  
+        return 'Subjective'
+    else:
+        return 'Objective'

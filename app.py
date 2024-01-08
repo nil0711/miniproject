@@ -1,168 +1,390 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import plotly.express as px
-import altair as alt
+
 import pandas as pd
 import numpy as np
+import time
+import math
+import matplotlib.dates as mdates
+
+
+
+import google.generativeai as genai 
 import seaborn as sns
+from dotenv import load_dotenv
 from preprocessor import preprocess_text_file
-from helper import stats, most_busy_user, get_wordcloud, top_com_words, fetch_message, top_emoji, time_line, daily_timeline, week_activity, month_activity, heat_map_data
+from helper import stats, most_busy_user, get_wordcloud, top_com_words, fetch_message, top_emoji, time_line, daily_timeline, week_activity, month_activity, heat_map_data,monthly_senti_change,daily_senti_change,monthly_emotion_change,daily_emotion_change,compount_sentiment_monthly,compount_emotion_monthly,subjectivity_percentage,subjectivity_trend,chat_keywords
 
-# Set Streamlit page configuration
+load_dotenv()
+
+
+genai.configure(api_key=st.secrets['GOOGLE_API'])
+def display_topic_keywords(topic_keywords):
+    columns = st.columns(5)
+
+    for i, (topic_name, keywords) in enumerate(topic_keywords.items()):
+        columns[i % 5].subheader(f"**{topic_name}**")
+        
+        columns[i % 5].markdown(", ".join(keywords[:5]))
+proceed = False
 st.set_page_config(page_title="Chat Analyzer", page_icon=":speech_balloon:", layout="wide")
-
-# Function to center-align titles
-def center_align_title(title):
-    return f"<h2 style='text-align:center;'>{title}</h2>"
-
-# Streamlit app
-
-# Sidebar
-st.sidebar.markdown(center_align_title("Chat Analyzer"), unsafe_allow_html=True)
-
-# File upload
-uploaded_file = st.sidebar.file_uploader("Choose a text file", type=["txt"])
-
+uploaded_file = st.file_uploader("Choose a text file", type=["txt"])
+show=True
 if uploaded_file is not None:
-    # Preprocess the uploaded file
+    show=False
     df = preprocess_text_file(uploaded_file)
 
-    # Display the processed DataFrame
     cf = df
     user_list = cf['user'].unique().tolist()
     user_list.remove("group-notification")
     user_list.sort()
     user_list = ['Overall'] + user_list
-    st.sidebar.text(f"Number of users: {len(user_list)-1}")
+    st.text(f"Number of users: {len(user_list)-1}")
 
-    selected_user = st.sidebar.selectbox("Show analysis with respect to", user_list)
+    selected_user = st.selectbox("Show analysis with respect to", user_list)
+    proceed=True
+    
+else:
+    st.title("Upload Any Whatsapp conversation to get started")
+    col1,col2= st.columns(2)
+    with col1:
+        st.header("Export the chat without media")
+        url = "https://github.com/nil0711/miniproject"
+        st.markdown(f"[Link to source code]({url})", unsafe_allow_html=True)
+    with col2:    
+        local_image_path = "./img.jpeg"
+        width = 300
+        st.image(local_image_path, caption="Export the chat without media",width=width)
 
-    if st.sidebar.button("Show Analysis"):
-        st.header((f"{selected_user} Analysis"))
-        col1, col2, col3, col4 = st.columns(4)
+    
+    
+   
 
-        with col1:
-            st.header(("Total Messages"))
-            st.title(stats(selected_user, df)[0])
+while not proceed:
+    time.sleep(1)
+tabs = st.tabs(["Data Visualization", "Sentiment Analysis", "Chat With AI"])
+with tabs[0]:
+    st.header("Data Visualization")
+    st.header((f"{selected_user} Analysis"))
+    col1, col2, col3, col4 = st.columns(4)
 
-        with col2:
-            st.header(("Total Words"))
-            st.title(stats(selected_user, df)[1])
+    with col1:
+        st.header(("Total Messages"))
+        st.title(stats(selected_user, df)[0])
 
-        with col3:
-            st.header(("Total Media Shared"))
-            st.title(stats(selected_user, df)[2])
+    with col2:
+        st.header(("Total Words"))
+        st.title(stats(selected_user, df)[1])
 
-        with col4:
-            st.header(("Total Links Shared"))
-            st.title(stats(selected_user, df)[3])
+    with col3:
+        st.header(("Total Media Shared"))
+        st.title(stats(selected_user, df)[2])
 
-        # Timeline Graph
-        st.markdown(center_align_title('Timeline Graph'), unsafe_allow_html=True)
-        col_timeline1, col_timeline2 = st.columns(2)
+    with col4:
+        st.header(("Total Links Shared"))
+        st.title(stats(selected_user, df)[3])
 
-        with col_timeline1:
-            st.markdown(center_align_title("Monthly Graph"), unsafe_allow_html=True)
-            fig_monthly = px.line(time_line(selected_user, df), x='time', y='message', template='plotly_dark')
-            st.plotly_chart(fig_monthly)
+    st.header(('Timeline Graph'))
+    col_timeline1, col_timeline2 = st.columns(2)
 
-        with col_timeline2:
-            st.markdown(center_align_title("Daily Graph"), unsafe_allow_html=True)
-            fig_daily = px.line(daily_timeline(selected_user, df), x='only_date', y='message', template='plotly_dark')
-            st.plotly_chart(fig_daily)
+    with col_timeline1:
+        st.subheader(("Monthly Graph"))
+        fig_monthly = px.line(time_line(selected_user, df), x='time', y='message', template='plotly_dark')
+        st.plotly_chart(fig_monthly)
 
-        # Activity Map
-        st.markdown(center_align_title("Activity Map"), unsafe_allow_html=True)
-        col_activity1, col_activity2 = st.columns(2)
+    with col_timeline2:
+        st.subheader(("Daily Graph"))
+        fig_daily = px.line(daily_timeline(selected_user, df), x='only_date', y='message', template='plotly_dark')
+        st.plotly_chart(fig_daily)
 
-        with col_activity1:
-            # Most Busy Months
-            st.markdown(center_align_title("Most Busy Months"), unsafe_allow_html=True)
-            month_data = month_activity(selected_user, df)
-            month_data = month_data.sort_values(by="month")
-            month_data["month"] = pd.Categorical(
-                month_data["month"],
-                categories=[
-                    "January", "February", "March", "April", "May", "June",
-                    "July", "August", "September", "October", "November", "December"
-                ],
-                ordered=True,
-            )
+    st.header(("Activity Map"))
+    col_activity1, col_activity2 = st.columns(2)
 
-            st.bar_chart(month_data, x="month", y="message", use_container_width=True)
+    with col_activity1:
+        st.subheader(("Most Busy Months"))
+        month_data = month_activity(selected_user, df)
+        month_data = month_data.sort_values(by="month")
+        month_data["month"] = pd.Categorical(
+            month_data["month"],
+            categories=[
+                "January", "February", "March", "April", "May", "June",
+                "July", "August", "September", "October", "November", "December"
+            ],
+            ordered=True,
+        )
 
-        with col_activity2:
-            # Most Busy Day
-            st.markdown(center_align_title("Most Busy Day"), unsafe_allow_html=True)
-            week_data = week_activity(selected_user, df)
-            week_data = week_data.sort_values(by="dayname")
-            week_data["dayname"] = pd.Categorical(
-                week_data["dayname"],
-                categories=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
-                ordered=True,
-            )
+        st.bar_chart(month_data, x="month", y="message", use_container_width=True)
 
-            st.bar_chart(week_data, x="dayname", y="message", use_container_width=True)
+    with col_activity2:
+        st.subheader(("Most Busy Day"))
+        week_data = week_activity(selected_user, df)
+        week_data = week_data.sort_values(by="dayname")
+        week_data["dayname"] = pd.Categorical(
+            week_data["dayname"],
+            categories=["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            ordered=True,
+        )
 
-        # Most Busy Users or Individual User Messages
-        if selected_user == 'Overall':
-            st.markdown(center_align_title("Most Busy Users"), unsafe_allow_html=True)
-            most_busy_users, busy_user_df = most_busy_user(df)
-            col_busy1, col_busy2 = st.columns(2)
+        st.bar_chart(week_data, x="dayname", y="message", use_container_width=True)
 
-            with col_busy2:
-                st.bar_chart(most_busy_users, use_container_width=True)
+    if selected_user == 'Overall':
+        st.header(("Most Busy Users"))
+        most_busy_users, busy_user_df = most_busy_user(df)
+        col_busy1, col_busy2 = st.columns(2)
 
-            with col_busy1:
-                st.dataframe(busy_user_df)
+        with col_busy2:
+            st.bar_chart(most_busy_users, use_container_width=True)
 
-        else:
-            st.markdown(center_align_title(f"{selected_user}'s messages in the group"), unsafe_allow_html=True)
-            st.dataframe(fetch_message(df, selected_user))
+        with col_busy1:
+            st.dataframe(busy_user_df)
 
-        st.markdown(center_align_title("User Activity Heatmap"), unsafe_allow_html=True)
-        heat_map = heat_map_data(selected_user, df)
-        fig_heatmap, ax_heatmap = plt.subplots(figsize=(25, 10))
+    else:
+        st.header((f"{selected_user}'s messages in the group"))
+        st.dataframe(fetch_message(df, selected_user))
 
-        # Assuming the index of your heatmap is the day names
-        day_names_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        heat_map = heat_map.reindex(day_names_order)
+    st.header(("User Activity Heatmap"))
+    heat_map = heat_map_data(selected_user, df)
+    fig_heatmap, ax_heatmap = plt.subplots(figsize=(25, 10))
 
-        sns.heatmap(heat_map, cbar_kws={'label': 'Message Count'}, annot=False, ax=ax_heatmap)
+    day_names_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    heat_map = heat_map.reindex(day_names_order)
 
-        # Set y-axis label rotation to vertical
-        ax_heatmap.set_yticklabels(ax_heatmap.get_yticklabels(), rotation=90, ha='right')
-        ax_heatmap.set_ylabel('Days')
+    sns.heatmap(heat_map, cbar_kws={'label': 'Message Count'}, annot=False, ax=ax_heatmap)
 
-        ax_heatmap.set_xlabel('Time Range')
-        st.pyplot(fig_heatmap)
+    ax_heatmap.set_yticklabels(ax_heatmap.get_yticklabels(), rotation=90, ha='right')
+    ax_heatmap.set_ylabel('Days')
+
+    ax_heatmap.set_xlabel('Time Range')
+    st.pyplot(fig_heatmap)
 
 
-        # WordCloud
-        st.markdown(center_align_title("WordCloud"), unsafe_allow_html=True)
-        df_wc = get_wordcloud(selected_user, df)
-        fig_wc, ax_wc = plt.subplots()
-        ax_wc.imshow(df_wc)
-        st.pyplot(fig_wc)
+    st.header(("WordCloud"))
+    df_wc = get_wordcloud(selected_user, df)
+    fig_wc, ax_wc = plt.subplots()
+    ax_wc.imshow(df_wc)
+    st.pyplot(fig_wc)
 
-        # Most Common Words
-        st.markdown(center_align_title("Most Common Words"), unsafe_allow_html=True)
-        col_common1, col_common2 = st.columns(2)
-        top_words_df = top_com_words(selected_user, df)
+    st.header(("Most Common Words"))
+    col_common1, col_common2 = st.columns(2)
+    top_words_df = top_com_words(selected_user, df)
 
-        with col_common1:
-            st.dataframe(top_words_df)
+    with col_common1:
+        st.dataframe(top_words_df)
 
-        with col_common2:
-            st.bar_chart(top_words_df, x="words", y="frequency", use_container_width=True)
+    with col_common2:
+        st.bar_chart(top_words_df, x="words", y="frequency", use_container_width=True)
 
-        # Most Common Emojis
-        st.markdown(center_align_title("Most Common Emojis"), unsafe_allow_html=True)
+    st.header(("Most Common Emojis"))
+    col_emoji1, col_emoji2 = st.columns(2)
+    top_emojis_df = top_emoji(selected_user, df)
+
+    if top_emojis_df.empty:
+        st.header("Most Common Emojis")
+        st.write("No Emoji analysis possible.")
+    else:
+        st.header("Most Common Emojis")
         col_emoji1, col_emoji2 = st.columns(2)
-        top_emojis_df = top_emoji(selected_user, df)
 
         with col_emoji1:
             st.dataframe(top_emojis_df)
 
         with col_emoji2:
             st.bar_chart(top_emojis_df, x="emoji", y="frequency", use_container_width=True)
+
+with tabs[1]:
+    st.header("Sentiment Analysis")
+    col_trend1, col_trend2= st.columns(2)
+    with col_trend1:
+        monthly_trend= monthly_senti_change(selected_user,df)
+        monthly_trend.index = monthly_trend.index.astype(str)
+        all_sentiments = ['Joy', 'Anger', 'Neutral', 'Sadness']
+
+        all_sentiments_df = pd.DataFrame(columns=all_sentiments)
+
+        monthly_trend = pd.merge(all_sentiments_df, monthly_trend, how='outer', left_index=True, right_index=True)
+
+        monthly_trend = monthly_trend.fillna(0)
+
+
+        st.subheader('Sentiment Trend Over Months:')
+        
+        fig = px.line(monthly_trend.reset_index(), x='date', y=['positive', 'mixed', 'neutral', 'negative'],
+                    labels={'value': 'Sentiment Proportion', 'date': 'Month'},
+                    line_shape='linear', render_mode='svg')
+
+        fig.update_layout(xaxis=dict(tickangle=-45, tickmode='array', tickvals=monthly_trend.index, ticktext=monthly_trend.index))
+
+        st.plotly_chart(fig)
+    with col_trend2:
+        st.subheader('Sentiment Trend Over Dates:')
+        daily_trend= daily_senti_change(selected_user,df)
+        all_sentiments = ['Joy', 'Anger', 'Neutral', 'Sadness']
+
+        all_sentiments_df = pd.DataFrame(columns=all_sentiments)
+
+        daily_trend = pd.merge(all_sentiments_df, daily_trend, how='outer', left_index=True, right_index=True)
+
+        daily_trend = daily_trend.fillna(0)
+        fig = px.line(daily_trend, x='only_date', y=['positive', 'mixed', 'neutral', 'negative'],
+              labels={'value': 'Sentiment Proportion', 'only_date': 'Date'},
+              line_shape='linear', render_mode='svg'  )
+
+        fig.update_xaxes(
+            dtick='M2',  
+            tickformat='%b %d',  
+            tickangle=-45  
+        )
+
+        
+        st.plotly_chart(fig)
+    coul_trend1, coul_trend2= st.columns(2)
+    with coul_trend1:
+        monthly_trend= monthly_emotion_change(selected_user,df)
+        monthly_trend.index = monthly_trend.index.astype(str)
+
+        
+        monthly_trend.index = monthly_trend.index.astype(str)
+
+        
+        st.subheader('Emotion Trend Over Months:')
+        
+        
+        fig = px.line(monthly_trend.reset_index(), x='only_date', y=['Joy', 'Anger', 'Neutral', 'Sadness'],
+                    labels={'value': 'Emotion Proportion', 'only-date': 'Month'},
+                    line_shape='linear', render_mode='svg')
+
+        
+        fig.update_layout(xaxis=dict(tickangle=-45, tickmode='array', tickvals=monthly_trend.index, ticktext=monthly_trend.index))
+
+        
+        st.plotly_chart(fig)
+    with coul_trend2:
+        st.subheader('Emotion Trend Over Dates:')
+        daily_trend= daily_emotion_change(selected_user,df)
+        fig = px.line(daily_trend, x='only_date', y=['Joy', 'Anger', 'Neutral', 'Sadness'],
+              labels={'value': 'Emotion Proportion', 'only_date': 'Date'},
+              line_shape='linear', render_mode='svg'  )
+
+        
+        fig.update_xaxes(
+            dtick='M2',  
+            tickformat='%b %d',  
+            tickangle=-45  
+        )
+
+        
+        st.plotly_chart(fig)
+        
+        
+        
+        
+    st.header('Mean Compound Sentiment Score:')
+    data = compount_sentiment_monthly(selected_user,df)
+    fig = px.line(data, x='only_date', y='polarity', title='Sentiment Trend Over Time',
+        labels={'month': 'Timestamp', 'polarity': 'Mean Compound Sentiment Score'})
+
+    fig.update_layout(height=600, width=1830)
+
+    st.plotly_chart(fig)
+        
+    st.header('Mean Compound Emotion Score:')
+    data = compount_emotion_monthly(selected_user,df)
+    fig = px.line(data, x='only_date', y='emotion_nltk', title='Emotion Trend Over Time',
+        labels={'month': 'Timestamp', 'emotion': 'Mean Compound Emotion Score'})
+    
+    
+    fig.update_layout(height=600, width=1830)
+
+    st.plotly_chart(fig)
+    
+    
+    
+    
+    
+    st.title('Sentiment vs Emotion_nltk Correlation Plot')
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    sns.scatterplot(x='sentiment', y='emotion_nltk', data=df, color='blue', label='Emotion_nltk')
+    sns.scatterplot(x='sentiment', y='sentiment', data=df, color='red', label='Sentiment')
+
+    z = np.polyfit(df['sentiment'], df['emotion_nltk'], 1)
+    p = np.poly1d(z)
+    beta_1, beta_0 = z
+    theta = math.degrees(math.atan(beta_1))
+    ax.plot(df['sentiment'], p(df['sentiment']), color='black', label='Correlation Line')
+
+    correlation_coefficient = df['sentiment'].corr(df['emotion_nltk'])
+
+    
+
+    ax.set_xlabel('Sentiment')
+    ax.set_ylabel('Emotion_nltk')
+    ax.set_title('Correlation between Sentiment and Emotion_nltk')
+
+    ax.legend()
+
+    st.subheader(f"The Correlation Coefficient is {round(correlation_coefficient, 3)}")
+    st.subheader(f"Beta 0 (Intercept): {round(beta_0, 3)}")
+    st.subheader(f"Beta 1 (Slope): {round(beta_1, 3)}")
+    st.subheader(f"Angle of the slope (theta): {round(theta, 3)} degrees")
+
+    st.pyplot(fig)
+
+
+        
+        
+    
+    sub1, sub2 = st.columns(2)
+    with sub1:
+        
+        st.subheader('Subjectivity Percentage')
+        st.bar_chart(subjectivity_percentage(selected_user, df))    
+    with sub2:
+        data= subjectivity_trend(selected_user,df)
+        
+
+
+        st.subheader('Subjectivity Trend Over Months:')
+        
+        st.plotly_chart(px.line(data, x='only_date', y=data.columns[1:], labels={'value': 'Subjectivity'}))
+    
+    
+
+    st.header("Topic Modelling")
+    topic_keywords= chat_keywords(selected_user,df)
+    display_topic_keywords(topic_keywords)
+    
+
+            
+
+
+
+
+
+
+with tabs[2]:
+    genai.configure(api_key=st.secrets['GOOGLE_API'])
+    load_dotenv()
+    st.header("Chat with AI")
+    model=genai.GenerativeModel("gemini-pro")
+    chat=model.start_chat(history=[])
+    def get_response(que):
+        res=chat.send_message(que,stream=True)
+        return res
+    if 'chat_history' not in st.session_state:
+        st.session_state['chat_history']=[]
+    input = st.text_input("Input",key="input")
+    submit = st.button("Ask The question")
+
+    if submit and input:
+        res = get_response(input)
+        st.session_state['chat_history'].append(("You",input))
+        st.subheader("The Resposnse is ")
+        for chunk in res:
+            st.write(chunk.text)
+            st.session_state['chat_history'].append(("Bot",chunk.text))
+    st.subheader("The Chat History is ")
+
+    for role,text in st.session_state['chat_history']:
+        st.write(f"{role}:{text}")

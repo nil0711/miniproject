@@ -6,6 +6,10 @@ import pandas as pd
 import emoji
 import seaborn as sns
 from datetime import datetime
+import google.generativeai as palm
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+from sklearn.decomposition import LatentDirichletAllocation
+from dotenv import load_dotenv
 
 
 
@@ -156,3 +160,140 @@ def convert_to_24_hour(time_range):
     end_dt = datetime.strptime(end_time, '%I%p')
     
     return start_dt.strftime('%H:%M') + ' - ' + end_dt.strftime('%H:%M')   
+
+
+def purify_data(df):
+    df = df[~df['user'].str.contains('added')]
+    df = df[~df['user'].str.contains('left')]
+    df = df[~df['user'].str.contains('security')]
+    df = df[~df['user'].str.contains('changed')]
+    df = df[~df['user'].str.contains('removed')]
+    df = df[~df['user'].str.contains('deleted')]
+    df = df[~df['user'].str.contains('joined')]
+    df = df[~df['user'].str.contains('created')]
+    df = df[~df['message'].str.contains('<Media omitted>')]
+    keywords = ['added', 'left', 'security', 'changed', 'removed', 'deleted', 'group-notification']
+    df = df[~df['user'].str.contains('|'.join(keywords))]
+    f=open('./stop_hinglish.txt','r')
+    stop_hinglish=f.read()
+    def remove_stop_words(sentence):
+        return ' '.join(word for word in sentence.lower().split() if word not in stop_hinglish)
+
+    df['message'] = df['message'].apply(remove_stop_words)
+    return df
+
+def monthly_senti_change(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    df = purify_data(df)
+    df['only_date'] = pd.to_datetime(df['only_date'])
+    monthly_sentiment = df.groupby(df['date'].dt.to_period("M"))['sentiment_category'].value_counts(normalize=True).unstack().fillna(0)   
+    return monthly_sentiment
+def daily_senti_change(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    df['only_date'] = pd.to_datetime(df['only_date'])
+    df = purify_data(df)
+    daily_sentiment = df.groupby(df['only_date'].dt.to_period("D"))['sentiment_category'].value_counts(normalize=True).unstack().reset_index().fillna(0) 
+    daily_sentiment['only_date'] = daily_sentiment['only_date'].dt.to_timestamp()    
+    return daily_sentiment
+
+def monthly_emotion_change(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    df = purify_data(df)
+    df['only_date'] = pd.to_datetime(df['only_date'])
+    monthly_emotion = df.groupby(df['only_date'].dt.to_period("M"))['emotion_label_nltk'].value_counts(normalize=True).unstack().reset_index().fillna(0)
+
+    monthly_emotion['only_date'] = monthly_emotion['only_date'].astype(str) 
+    emotion_labels = ['Anger', 'Joy', 'Neutral', 'Sadness']
+
+    missing_columns = [label for label in emotion_labels if label not in monthly_emotion.columns.tolist()]
+
+    if missing_columns:
+        for label in missing_columns:
+            monthly_emotion[label] = 0  
+    return monthly_emotion
+
+def daily_emotion_change(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    df = purify_data(df)
+    df['only_date'] = pd.to_datetime(df['only_date'])
+    daily_emotion = df.groupby(df['only_date'].dt.to_period("D"))['emotion_label_nltk'].value_counts(normalize=True).unstack().reset_index().fillna(0)
+    daily_emotion['only_date'] = daily_emotion['only_date'].dt.to_timestamp()    
+    emotion_labels = ['Anger', 'Joy', 'Neutral', 'Sadness']
+
+    missing_columns = [label for label in emotion_labels if label not in daily_emotion.columns.tolist()]
+
+    if missing_columns:
+        for label in missing_columns:
+            daily_emotion[label] = 0
+    return daily_emotion
+
+def compount_sentiment_monthly(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    df = purify_data(df)
+    data = df.groupby('only_date')['polarity'].mean().reset_index()
+    return data
+
+def compount_emotion_monthly(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    df = purify_data(df)
+    data = df.groupby('only_date')['emotion_nltk'].mean().reset_index()
+    return data
+
+def subjectivity_percentage(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    return df['subjectivity'].value_counts(normalize=True) * 100
+
+def subjectivity_trend(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    df['only_date'] = pd.to_datetime(df['only_date'])
+    trend_df = df.groupby(df['only_date'].dt.to_period("M"))['subjectivity'].value_counts(normalize=True).unstack().reset_index().fillna(0)
+    trend_df['only_date'] = trend_df['only_date'].dt.to_timestamp()
+
+    
+    return trend_df
+
+
+def chat_keywords(user_type,df ):
+    if user_type is not "Overall":
+        df= df[df['user']==user_type]
+    load_dotenv()
+    df = purify_data(df)
+    palm.configure(api_key=st.secrets['GOOGLE_API']) 
+
+    messages = df['message'].astype(str)
+
+    vectorizer = CountVectorizer(stop_words='english')
+    X = vectorizer.fit_transform(messages)
+
+    tfidf_transformer = TfidfTransformer()
+    X_tfidf = tfidf_transformer.fit_transform(X)
+
+    n_topics = 5  
+    lda = LatentDirichletAllocation(n_components=n_topics, random_state=42)
+    lda.fit(X_tfidf)
+
+    feature_names = vectorizer.get_feature_names_out()
+    topic_keywords = {}
+    for topic_idx, topic in enumerate(lda.components_):
+        top_keywords_idx = topic.argsort()[:-51:-1]  
+        top_keywords = [feature_names[i] for i in top_keywords_idx]
+
+        input_text = f"Generate a topic name with max 6 words  based on the keywords: {', '.join(top_keywords)}"
+
+        response = palm.generate_text(
+            model="models/text-bison-001",  
+            prompt=input_text,
+            max_output_tokens=50
+        )
+        topic_name = response.result.strip()
+
+        topic_keywords[topic_name] = top_keywords
+    return topic_keywords
