@@ -14,7 +14,7 @@ import google.generativeai as genai
 import seaborn as sns
 
 from preprocessor import preprocess_text_file
-from helper import stats, most_busy_user, get_wordcloud, top_com_words, fetch_message, top_emoji, time_line, daily_timeline, week_activity, month_activity, heat_map_data,monthly_senti_change,daily_senti_change,monthly_emotion_change,daily_emotion_change,compount_sentiment_monthly,compount_emotion_monthly,subjectivity_percentage,subjectivity_trend,chat_keywords
+from helper import stats, most_busy_user, get_wordcloud, top_com_words, fetch_message, top_emoji, time_line, daily_timeline, user_input, week_activity, month_activity, heat_map_data,monthly_senti_change,daily_senti_change,monthly_emotion_change,daily_emotion_change,compount_sentiment_monthly,compount_emotion_monthly,subjectivity_percentage,subjectivity_trend,chat_keywords
 
 
 
@@ -352,8 +352,8 @@ with tabs[1]:
     
 
     st.header("Topic Modelling")
-    topic_keywords= chat_keywords(selected_user,df)
-    display_topic_keywords(topic_keywords)
+    # topic_keywords= chat_keywords(selected_user,df)
+    # display_topic_keywords(topic_keywords)
     
 
             
@@ -364,27 +364,9 @@ with tabs[1]:
 
 
 with tabs[2]:
-    genai.configure(api_key=st.secrets['GOOGLE_API'])
-    
-    st.header("Chat with AI")
-    model=genai.GenerativeModel("gemini-pro")
-    chat=model.start_chat(history=[])
-    def get_response(que):
-        res=chat.send_message(que,stream=True)
-        return res
-    if 'chat_history' not in st.session_state:
-        st.session_state['chat_history']=[]
-    input = st.text_input("Input",key="input")
-    submit = st.button("Ask The question")
+    st.header("Chatbot using Gemini-Pro 💁")
 
-    if submit and input:
-        res = get_response(input)
-        st.session_state['chat_history'].append(("You",input))
-        st.subheader("The Resposnse is ")
-        for chunk in res:
-            st.write(chunk.text)
-            st.session_state['chat_history'].append(("Bot",chunk.text))
-    st.subheader("The Chat History is ")
+    user_question = st.text_input("Ask any Question regading the app or analysis")
 
-    for role,text in st.session_state['chat_history']:
-        st.write(f"{role}:{text}")
+    if user_question:
+        user_input(user_question)
