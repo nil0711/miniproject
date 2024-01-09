@@ -24,3 +24,10 @@ google-generativeai
 scikit-learn
 textblob
 nltk
+
+
+
+langchain
+PyPDF2
+
+faiss-cpu
