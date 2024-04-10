@@ -107,6 +107,7 @@ def preprocess_text_file(uploaded_file):
     df = df[~df['user'].str.contains('deleted')]
     df = df[~df['user'].str.contains('joined')]
     df = df[~df['user'].str.contains('created')]
+    df = df[~df['user'].str.contains('group-notification')]
 
     df = df[~np.isnan(df['year'])]
     df['year'] = df['year'].astype(int)
