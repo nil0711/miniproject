@@ -37,7 +37,7 @@ if uploaded_file is not None:
 
     cf = df
     user_list = cf['user'].unique().tolist()
-    user_list.remove("group-notification")
+    
     user_list.sort()
     user_list = ['Overall'] + user_list
     st.text(f"Number of users: {len(user_list)-1}")
