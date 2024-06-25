@@ -17,6 +17,7 @@ The Chat Analyzer is a web application designed to analyze WhatsApp conversation
 ## File Structure
 
 - `app.py`: Main Python script running the web application.
+- `preprocessor.py`: Python script for preprocessing chat data.
 - `helper.py`: Helper functions for statistical analysis and visualization.
 - `requirements.txt`: List of dependencies required to run the application.
 
