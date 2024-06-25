@@ -71,4 +71,4 @@ The Chat Analyzer is a web application designed to analyze WhatsApp conversation
 ## Contributing
 
 Contributions are welcome! Please fork this repository and submit pull requests for any enhancements or bug fixes.
-```
+
