@@ -1,4 +1,4 @@
-```markdown
+
 # Chat Analyzer
 
 ## Overview
