@@ -3,7 +3,7 @@
 
 ## Overview
 
-The Chat Analyzer is a web application designed to analyze WhatsApp conversations. It provides data visualization, sentiment analysis, and a chatbot feature to interact with users. The application leverages various Python libraries and tools, including Streamlit for the web interface, Matplotlib and Plotly for data visualization, and Google's Generative AI for the chatbot.
+The Chat Analyzer is a web application designed to analyze WhatsApp conversations. It provides data visualization, sentiment analysis, and a chatbot feature to interact with users. The application uses various Python libraries and tools, including Streamlit for the web interface, Matplotlib and Plotly for data visualization, and Google's Generative AI for the chatbot.
 
 ## Features
 
